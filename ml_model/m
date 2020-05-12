@@ -1,0 +1,52 @@
+import pandas as pd
+training_data = pd.read_csv('train.csv')
+from sklearn.model_selection import train_test_split
+
+
+def get_title(name):
+    if '.' in name:
+        title=name.split(',')[1].split('.')[0].strip()
+        return title
+    else:
+        return 'unknown'
+titles = sorted(set(name for name in training_data['Name'].map(lambda x:get_title(x))))
+titles
+
+def replace_title(data):
+    title=data['Title']
+    if title in ['Capt','Col','Major']:
+        return 'Officer'
+    elif title in ['Jonkheer','Don','the Countess','Dona','Lady','Sir']:
+        return 'Royalty'
+    elif title in ['Mlle','Ms']:
+        return 'Miss'
+    elif title in ['the Countess','Mme','Lady']:
+        return 'Mrs'
+    else:
+        return title
+training_data['Title']=list(map(lambda x:get_title(x),training_data['Name']))
+
+training_data['Title']=training_data.apply(replace_title,axis=1)
+training_data['Age'].fillna(training_data['Age'].median(),inplace=True)
+training_data['Embarked'].fillna('S',inplace=True)
+training_data.drop('Cabin',axis=1,inplace=True)
+training_data.drop('PassengerId',axis=1,inplace=True)
+training_data.drop('Ticket',axis=1,inplace=True)
+training_data.drop('Name',axis=1,inplace=True)
+training_data['Embarked'].replace(('S','C','Q'),(0,1,2),inplace=True)
+training_data['Sex'].replace(('male','female'),(0,1),inplace=True)
+training_data['Title'].replace(('Mr','Miss','Mrs','Master','Dr','Rev','Royalty','Officer'),(0,1,2,3,4,5,6,7),inplace=True)
+x=training_data.drop('Survived',axis=1)
+y = training_data['Survived']
+x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=.1)
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+import pickle
+cls=RandomForestClassifier()
+cls.fit(x_train,y_train) # just training the model by changing the parameters
+ypredict = cls.predict(x_test)
+print(accuracy_score(ypredict,y_test))
+myfile = open("classifier",'wb')
+pickle.dump(cls,myfile)
+myfile.close()
+
